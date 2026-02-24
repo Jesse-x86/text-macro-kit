@@ -14,7 +14,7 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 
 [project.urls]
 "Homepage" = "https://github.com/Jesse-x86/text-macro-kit"
