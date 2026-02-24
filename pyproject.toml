@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "text-macro-kit"
+version = "0.1.0"
+description = "一个优雅的文本宏处理工具包"
+authors = [
+    { name = "Jesse-x86", email = "144566795+Jesse-x86@users.noreply.github.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+]
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.urls]
+"Homepage" = "https://github.com/Jesse-x86/text-macro-kit"
+"Bug Tracker" = "https://github.com/Jesse-x86/text-macro-kit/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -4,7 +4,7 @@ from typing import Optional, Generic
 from .interfaces import Macro, MacroContextType, MacroStateType
 
 
-class MacroDefinitionHolder(Generic[MacroContextType, MacroStateType]):
+class MacroRegistry(Generic[MacroContextType, MacroStateType]):
     def __init__(self):
         self.macros: dict[str, tuple[bool, Macro[MacroContextType, MacroStateType, ...]]] = {}
 

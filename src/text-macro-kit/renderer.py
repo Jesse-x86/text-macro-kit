@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Generic, AnyStr, Optional
 
 from .builtin_aux_funcs import static_text_parser
-from .definition_holder import MacroDefinitionHolder
+from .registry import MacroRegistry
 from .interfaces import MacroStateSource, MacroContextType, MacroStateType, Macro
 
 # TODO: 支持\:符号
@@ -26,7 +26,7 @@ def get_re(open_tag: str, end_tag: str) -> re.Pattern[AnyStr]:
 class MacroRenderer(Generic[MacroContextType, MacroStateType]):
     def __init__(
             self,
-            macro_holder: MacroDefinitionHolder[MacroContextType, MacroStateType],
+            macro_holder: MacroRegistry[MacroContextType, MacroStateType],
             state_source: MacroStateSource,
             *,
             open_tag: str = DEFAULT_OPEN_TAG,
