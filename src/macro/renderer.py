@@ -26,14 +26,14 @@ def get_re(open_tag: str, end_tag: str) -> re.Pattern[AnyStr]:
 class MacroRenderer(Generic[MacroContextType, MacroStateType]):
     def __init__(
             self,
-            macro_holder: MacroRegistry[MacroContextType, MacroStateType],
+            registry: MacroRegistry[MacroContextType, MacroStateType],
             state_source: MacroStateSource,
             *,
             open_tag: str = DEFAULT_OPEN_TAG,
             close_tag: str = DEFAULT_CLOSE_TAG,
             separate_tag: str = DEFAULT_SEPARATE_TAG,
     ):
-        self.macro_holder = macro_holder
+        self.registry = registry
         self.state_source = state_source
 
         # 配置项
@@ -90,7 +90,7 @@ class MacroRenderer(Generic[MacroContextType, MacroStateType]):
             async with renderer.session(context):
                 result = await renderer.render(text)
         """
-        self._macros = self.macro_holder.get_macros()
+        self._macros = self.registry.get_macros()
         self._state = await self.state_source.get_state()
         self._context = context
 

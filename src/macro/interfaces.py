@@ -16,4 +16,4 @@ SyncMacro = Callable[Concatenate[MacroContextType, MacroStateType, P], Optional[
 # noinspection PyTypeHints
 AsyncMacro = Callable[Concatenate[MacroContextType, MacroStateType, P], Awaitable[Optional[str]]]
 
-Macro = Union[SyncMacro[MacroContextType, MacroStateType, ...], AsyncMacro[MacroContextType, MacroStateType, ...]]
+Macro = Union[SyncMacro[MacroContextType, MacroStateType, P], AsyncMacro[MacroContextType, MacroStateType, P]]

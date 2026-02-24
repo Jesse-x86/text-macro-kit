@@ -101,7 +101,7 @@ def parse_value(text: str) -> tuple[Optional[str], str]:
             continue
         elif kind == 'quote':
             # 任务：让内部的=和分隔符不识别，基本不需要特别做什么
-            append_segment(last_pos, start_pos,)
+            append_segment(last_pos, start_pos)
             last_pos = end_pos
             in_quote = not in_quote
             continue
@@ -136,9 +136,7 @@ def static_text_parser(text: str,
     if not separated_text:
         return "", [], {}
 
-    _, name = parse_value(separated_text[0])
-    if not name:
-        raise ValueError("macro name should not include '='")
+    name = separated_text[0].strip()
 
     for text in separated_text[1:]:
         k, v = parse_value(text)
