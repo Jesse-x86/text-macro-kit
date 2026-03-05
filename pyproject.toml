@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "text-macro-kit"
-version = "0.1.0"
+version = "0.1.1"
 description = "一个优雅的文本宏处理工具包"
 authors = [
     { name = "Jesse-x86", email = "144566795+Jesse-x86@users.noreply.github.com" }
@@ -28,3 +28,4 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["macro*"]
