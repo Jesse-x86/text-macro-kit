@@ -75,15 +75,15 @@ class MacroDPSignal(DisplaySignal):
     macro_id: int # ID of the macro to manipulate
 
 @dataclass(frozen=True, slots=True)
-class MacroStartDPSignal(MacroDPSignal):
+class OpenMacroDPSignal(MacroDPSignal):
     ...
 
 @dataclass(frozen=True, slots=True)
-class MacroRawDPSignal(MacroDPSignal):
+class CloseMacroDPSignal(MacroDPSignal):
     ...
 
 @dataclass(frozen=True, slots=True)
-class MacroFinDPSignal(MacroDPSignal):
+class UpdateMacroDPSignal(MacroDPSignal):
     ...
 
 # --- AST ---
@@ -120,21 +120,7 @@ class GeneralMacroAO(MacroAO):
     args: tuple[MacroArgsAO, ...]
 
 # --- Token -> AST ---
-
+@dataclass(slots=True)
 class MacroBuilder:
     macro_id: int
-
-class SpecialMacroBuilder:
-    macro_type: Literal["//", "!"]
-    raw_content: str
-
-class MacroArgBuilder(MacroBuilder):
-    arg_name: Optional[str]
-    arg_value: list[TextAO | MacroRefAO]
-
-class GeneralMacroBuilder(MacroBuilder):
-    macro_name: str
-    args: list[MacroArgBuilder]
-
-class UndecidedMacroBuilder(MacroBuilder):
-    ...
+    token_bits: list[list[Token | MacroRefAO]]

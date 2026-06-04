@@ -1,11 +1,11 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 from .models import (ParserConfig, CONST_ESCAPE_TAG, CONST_EQUAL_TAG, CONST_QUOTE_TAG,
                      Token, TextToken, OpenToken, CloseToken, EscapeToken, SeparatorToken, QuoteToken, EqualToken,
                      DisplaySignal, TextDPSignal, EscapeDPSignal, PendingEscapeDPSignal, UpdateEscapeDPSignal,
-                     MacroDPSignal, MacroFinDPSignal, MacroRawDPSignal, MacroStartDPSignal,
+                     MacroDPSignal, CloseMacroDPSignal, UpdateMacroDPSignal, OpenMacroDPSignal,
                      ASTObj, MacroAO, MacroRefAO, MacroArgsAO, GeneralMacroAO, SpecialMacroAO, TextAO,
-                     MacroBuilder, MacroArgBuilder, GeneralMacroBuilder, SpecialMacroBuilder, UndecidedMacroBuilder)
+                     MacroBuilder)
 from ..utils.id_uniquefier import IDUniquefier
 
 
@@ -22,30 +22,25 @@ class Parser:
         ds_buffer: list[DisplaySignal] = []
         complete_ast_buffer: list[ASTObj] = []
 
-        in_quote = False
-
-        def _flush_escape():
+        def _flush_escape() -> int:
+            esc_len = self.pending_escape_len
             if self.pending_escape_len > 0:
                 self.pending_escape_len = 0
+            return esc_len
 
-        def _handle_escape() -> bool:
+        def _handle_escape() -> (int, bool):
+            esc_len = self.pending_escape_len
             if self.pending_escape_len > 0:
-                is_str = self.pending_escape_len % 2 == 1
-                var = self.pending_escape_len // 2
                 self.pending_escape_len = 0
-                ds_buffer.append(UpdateEscapeDPSignal(CONST_ESCAPE_TAG, var))
-                return is_str
-            return False
+                is_str = esc_len % 2 == 1
+                esc_len = esc_len // 2
+                ds_buffer.append(UpdateEscapeDPSignal(CONST_ESCAPE_TAG, esc_len))
+                return esc_len, is_str
+            return esc_len, False
 
         while i < len(tokens):
             token = tokens[i]
             i += 1
-
-            # Escape Token: No special case
-            if isinstance(token, EscapeToken):
-                self.pending_escape_len += token.len
-                ds_buffer.append(PendingEscapeDPSignal(CONST_ESCAPE_TAG, self.pending_escape_len))
-                continue
 
             # get current macro
             if self.buffer:
@@ -53,71 +48,129 @@ class Parser:
             else:
                 current_macro = None
 
+            # \ Token
+            if isinstance(token, EscapeToken):
+                # special logic:
+                self.pending_escape_len += token.len
+                ds_buffer.append(PendingEscapeDPSignal(CONST_ESCAPE_TAG, self.pending_escape_len))
+                continue
+
             # = token
             if isinstance(token, EqualToken):
                 # Not inside macro:
                 if not current_macro:
                     _flush_escape()
-                    ds_buffer.append(TextDPSignal("="))
+                    ds_buffer.append(TextDPSignal(CONST_EQUAL_TAG))
                     continue
-                # inside a macro
+                # inside macro:
                 else:
-                    # is special macro?
-                    if isinstance(current_macro, SpecialMacroBuilder):
-                        current_macro.raw_content += "="
-                        continue
-                    # is undecided?
-                    if isinstance(current_macro, UndecidedMacroBuilder):
-                        # decide: it's regular macro
-                        self.buffer.pop()
-                        current_macro = GeneralMacroBuilder()
-                        self.buffer.append(current_macro)
-                        # move on, no continue
-                    # in macro name part?
-                    if not current_macro.args:
-                        current_macro.macro_name += "="
-                        continue
-                    # in arg part
-                    arg = current_macro.args[-1]
-                    # first eq?
-                    if arg.arg_value
+                    esc_len, is_str = _handle_escape()
+                    ds_buffer.append(TextDPSignal(CONST_EQUAL_TAG))
+                    if esc_len > 0:
+                        current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                    if is_str:
+                        token = TextToken(CONST_EQUAL_TAG)
+                    current_macro.token_bits[-1].append(token)
+                    continue
 
-
-                    ...
+            # " token
+            if isinstance(token, QuoteToken):
+                # Not inside macro:
+                if not current_macro:
+                    _flush_escape()
+                    ds_buffer.append(TextDPSignal(CONST_QUOTE_TAG))
+                    continue
+                # inside macro:
+                else:
+                    esc_len, is_str = _handle_escape()
+                    ds_buffer.append(TextDPSignal(CONST_QUOTE_TAG))
+                    if esc_len > 0:
+                        current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                    if is_str:
+                        token = TextToken(CONST_QUOTE_TAG)
+                    current_macro.token_bits[-1].append(token)
+                    continue
 
             # Text Token
             if isinstance(token, TextToken):
-                # Not inside macro:
-                if not current_macro:
-                    ds_buffer.append(TextDPSignal(token.text))
-                    continue
-                # Inside macro:
-                else:
-                    ...
-
+                esc_len = _flush_escape()
+                ds_buffer.append(TextDPSignal(token.text))
+                if current_macro:
+                    if esc_len > 0:
+                        current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                    current_macro.token_bits[-1].append(token)
+                continue
 
             # :: token
             if isinstance(token, SeparatorToken):
+                # Not inside macro:
                 if not current_macro:
+                    _flush_escape()
                     ds_buffer.append(TextDPSignal(self.config.separator_tag))
                     continue
+                # inside macro:
                 else:
-                    _id = current_macro.macro_id
-                    ds_buffer.append(MacroRawDPSignal(macro_id=_id, text=self.config.separator_tag))
-
+                    esc_len, is_str = _handle_escape()
+                    ds_buffer.append(TextDPSignal(self.config.separator_tag))
+                    if esc_len > 0:
+                        current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                    if is_str:
+                        token = TextToken(self.config.separator_tag)
+                        current_macro.token_bits[-1].append(token)
+                    # if it's not a string, build a new segment
+                    else:
+                        current_macro.token_bits.append([])
+                    continue
 
             # {{ token
             if isinstance(token, OpenToken):
-                _id = self.idu.get_id()
+                # Must handle escape first
+                esc_len, is_str = _handle_escape()
 
-                # if already in a macro chain
-                if isinstance(current_macro, GeneralMacroBuilder):
-                    #
-                    current_macro.args[-1].arg_value.append(MacroRefAO(_id))
+                if current_macro and esc_len > 0:
+                    current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                # if it's a string, then no special handle needed
+                if is_str:
+                    if current_macro:
+                        current_macro.token_bits[-1].append(TextToken(self.config.open_tag))
+                    ds_buffer.append(TextDPSignal(self.config.open_tag))
+                    continue
+                # if it's not a string, we'll need some bs
+                else:
+                    _id = self.idu.get_id()
+                    ds_buffer.append(OpenMacroDPSignal(text=self.config.open_tag, macro_id=_id))
+                    if current_macro:
+                        ref = MacroRefAO(_id)
+                        current_macro.token_bits[-1].append(ref)
+                    new_macro = MacroBuilder(macro_id=_id, token_bits=[[]])
+                    self.buffer.append(new_macro)
+                    continue
 
-                i += 1
-                next_token = self.buffer[i]
-                self.buffer.append()
+            # }} token
+            if isinstance(token, CloseToken):
+                # Not inside macro:
+                if not current_macro:
+                    _flush_escape()
+                    ds_buffer.append(TextDPSignal(self.config.close_tag))
+                    continue
+                # inside macro:
+                else:
+                    esc_len, is_str = _handle_escape()
+                    if esc_len > 0:
+                        current_macro.token_bits[-1].append(TextToken(CONST_ESCAPE_TAG * esc_len))
+                    if is_str:
+                        token = TextToken(self.config.close_tag)
+                        current_macro.token_bits[-1].append(token)
+                        ds_buffer.append(TextDPSignal(self.config.close_tag))
+                    # if it's not a string, end current macro
+                    else:
+                        # display & label end
+                        ds_buffer.append(CloseMacroDPSignal(text=self.config.close_tag, macro_id=current_macro.macro_id))
+                        self.buffer.pop()
+                        macro_ast = self._parse(current_macro)
+                        if macro_ast:
+                            complete_ast_buffer.append(macro_ast)
+                    continue
 
         return ds_buffer, complete_ast_buffer
 
@@ -125,3 +178,6 @@ class Parser:
         self.buffer.clear()
         self.pending_escape_len = 0
         return
+
+    def _parse(self, builder: MacroBuilder) -> Optional[ASTObj]:
+        ...
