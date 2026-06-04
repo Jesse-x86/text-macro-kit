@@ -6,8 +6,8 @@ from .models import (ParserConfig, CONST_ESCAPE_TAG, CONST_EQUAL_TAG, CONST_QUOT
 class Lexer:
 
     def __init__(self, config: ParserConfig):
-        self.buffer = ""
-        self.config = config
+        self.buffer: str = ""
+        self.config: ParserConfig = config
 
     def feed(self, text: str) -> list[Token]:
         self.buffer += text
