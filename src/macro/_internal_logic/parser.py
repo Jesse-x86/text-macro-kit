@@ -7,6 +7,7 @@ from .models import (ParserConfig, CONST_ESCAPE_TAG, CONST_EQUAL_TAG, CONST_QUOT
                      ASTObj, MacroAO, MacroRefAO, MacroArgsAO, GeneralMacroAO, SpecialMacroAO, TextAO,
                      MacroBuilder, SpecialMacroBuilder)
 from ..utils.id_uniquefier import IDUniquefier
+from .translator import translate
 
 
 class Parser:
@@ -28,7 +29,7 @@ class Parser:
                 self.pending_escape_len = 0
             return esc_len
 
-        def _handle_escape() -> (int, bool):
+        def _handle_escape() -> Tuple[int, bool]:
             esc_len = self.pending_escape_len
             if self.pending_escape_len > 0:
                 self.pending_escape_len = 0
@@ -227,7 +228,7 @@ class Parser:
                             )
                         # regular macro
                         else:
-                            macro_ast = self._parse(finished_macro)
+                            macro_ast = translate(finished_macro)
 
                         # get parsed macro? if parameters illegal may get None, can handle as pure text
                         if macro_ast:
@@ -248,6 +249,3 @@ class Parser:
         self.special_buffer.clear()
         self.pending_escape_len = 0
         return [], ast_buffer
-
-    def _parse(self, builder: MacroBuilder) -> Optional[MacroAO]:
-        ...
