@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Literal
 
 # --- GeneralConfig ---
@@ -17,11 +17,11 @@ class ParserConfig:
 
 @dataclass(frozen=True, slots=True)
 class Token:
-    ...
+    text: str
 
 @dataclass(frozen=True, slots=True)
 class TextToken(Token):
-    text: str
+    ...
 
 @dataclass(frozen=True, slots=True)
 class EscapeToken(Token):
@@ -124,3 +124,9 @@ class GeneralMacroAO(MacroAO):
 class MacroBuilder:
     macro_id: int
     token_bits: list[list[Token | MacroRefAO]]
+
+@dataclass(slots=True)
+class SpecialMacroBuilder(MacroBuilder):
+    macro_type: str
+    raw_content: str
+    ast_cache: list[MacroAO] = field(default_factory=list)

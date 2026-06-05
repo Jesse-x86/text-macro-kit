@@ -56,7 +56,7 @@ class Lexer:
                             escape_len += 1
                         else:
                             break
-                    output_buffer.append(EscapeToken(len=escape_len))
+                    output_buffer.append(EscapeToken(len=escape_len, text=CONST_ESCAPE_TAG))
                     i = j
                 continue
 
@@ -71,7 +71,7 @@ class Lexer:
             ]:
                 if self.buffer.startswith(tag, i):
                     with flush_op():
-                        output_buffer.append(token())
+                        output_buffer.append(token(text=tag))
                         i += len(tag)
                     matched = True
                     break
@@ -92,7 +92,8 @@ class Lexer:
                     (len(self.buffer) - i < len(self.config.separator_tag)
                     and self.config.separator_tag.startswith(self.buffer[i:])))
             ):
-                    break
+                # leave for later
+                break
 
             # if none of these applies, it's plain text
             else:
