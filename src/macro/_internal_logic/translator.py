@@ -3,53 +3,51 @@ from typing import Optional
 from .models import (Token, TextToken, QuoteToken, EqualToken,
                      MacroAO, MacroRefAO, MacroArgsAO, GeneralMacroAO, MacroBuilder, TextAO)
 
+def is_nonempty(text: str):
+    return text and text.strip()
 
 def _strip_tokens(arg: list[Token | MacroRefAO]) -> list[TextAO | MacroRefAO]:
     new_list = []
     # remove front empty
-    i = 0
-    cut_l_quote = False
-    cut_r_quote = False
-    while i < len(arg):
+    lo = 0
+    while lo < len(arg):
         # None-text token cannot be empty
-        if not isinstance(arg[i], TextToken):
-            if isinstance(arg[i], QuoteToken):
-                cut_l_quote = True
+        if not isinstance(arg[lo], TextToken):
             break
-        # only strip left side
-        var = arg[i].text.lstrip()
-        i += 1
 
         # if after strip is not empty, is not empty.
-        if not len(var) == 0:
-            new_list.append(TextToken(var))
+        if is_nonempty(arg[lo].text):
             break
+        lo += 1
 
     # remove end empty
-    j = len(arg) - 1
-    while i < j:
+    hi = len(arg) - 1
+    while lo <= hi:
         # None-text token cannot be empty
-        if not isinstance(arg[j], TextToken):
-            if isinstance(arg[j], QuoteToken):
-                cut_r_quote = True
-            new_list.extend(arg[i:j+1])
+        if not isinstance(arg[hi], TextToken):
             break
-        # only strip left side
-        var = arg[j].text.rstrip()
-        j -= 1
 
         # if after strip is not empty, is not empty.
-        if not len(var) == 0:
-            new_list.extend(arg[i:j+1])
-            new_list.append(TextToken(var))
+        if is_nonempty(arg[hi].text):
             break
+        hi -= 1
 
-    if len(new_list) == 1 and isinstance(new_list[0], TextToken):
-        new_list[0] = TextToken(new_list[0].text.rstrip())
+    if hi < lo:
+        return []
 
     # remove quotes
-    if len(new_list) > 1 and cut_l_quote and cut_r_quote:
-        new_list = new_list[1:-1]
+    if hi > lo and isinstance(arg[hi], QuoteToken) and isinstance(arg[lo], QuoteToken):
+        new_list = arg[lo+1: hi]
+    else:
+        new_list = arg[lo: hi+1]
+        if lo == hi:
+            if isinstance(new_list[0], TextToken):
+                new_list[0] = TextToken(new_list[0].text.strip())
+        else:
+            if isinstance(new_list[0], TextToken):
+                new_list[0] = TextToken(new_list[0].text.lstrip())
+            if isinstance(new_list[-1], TextToken):
+                new_list[-1] = TextToken(new_list[-1].text.rstrip())
 
     # text-fy
     str_buffer = ""
@@ -108,7 +106,8 @@ def translate(builder: MacroBuilder) -> Optional[MacroAO]:
         if macro_name is None:
             return None
 
-        # elsewise macro name is empty, no operation needed
+        # elsewise macro name is set
+        # even if empty, no operation needed
         # leave only args to handle
         tb = tb[1:]
 
