@@ -1,9 +1,7 @@
 from typing import Protocol, Callable, Optional, Awaitable, Union, ParamSpec, TypeVar, Concatenate
 
-from pydantic import BaseModel
-
-MacroContextType = TypeVar("MacroContextType", bound=BaseModel)
-MacroStateType = TypeVar("MacroStateType", bound=BaseModel)
+MacroContextType = TypeVar("MacroContextType")
+MacroStateType = TypeVar("MacroStateType")
 
 class MacroStateSource(Protocol[MacroStateType]):
     async def get_state(self) -> MacroStateType: ...
